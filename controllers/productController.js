@@ -57,7 +57,7 @@ exports.createProduct = async (req, res, next) => {
     // const product = new Product(name, price); // {name: , price: }
     // await product.save();
 
-    res.status(200).json({ product: product });
+    res.status(201).json({ product: product });
   } catch (err) {
     next(err);
   }
@@ -71,6 +71,28 @@ exports.createProduct = async (req, res, next) => {
   //     res.status(200).json({ message: 'Create Product' });
   //   }
   // );
+};
+
+exports.bulkCreate = async (req, res, next) => {
+  try {
+    const { products } = req.body;
+
+    for ({ name, price } of products) {
+      if (!name || !name.trim())
+        return res.status(400).json({ message: 'name is required' });
+      if (price === undefined)
+        return res.status(400).json({ message: 'price is required' });
+      if (!(+price > 0))
+        return res
+          .status(400)
+          .json({ message: 'price must be numeric and greater than zero' });
+    }
+
+    await Product.bulkCreate(products);
+    res.status(201).json({ message: 'all products created' });
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.updateProduct = async (req, res, next) => {
@@ -87,22 +109,14 @@ exports.updateProduct = async (req, res, next) => {
         .status(400)
         .json({ message: 'price must be numeric and greater than zero' });
 
-    const resultProduct = await db.execute(
-      'SELECT * FROM products WHERE id = ?',
-      [id]
-    );
+    // await db.execute('UPDATE products SET name = ?, price = ? WHERE id = ?', [
+    //   name,
+    //   price,
+    //   id
+    // ]);
 
-    if (!resultProduct[0].length)
-      return res
-        .status(400)
-        .json({ message: 'product with this id is not found' });
-
-    await db.execute('UPDATE products SET name = ?, price = ? WHERE id = ?', [
-      name,
-      price,
-      id
-    ]);
-    res.status(200).json({ message: 'Update product success' });
+    const product = await Product.updateById(id, { name, price });
+    res.status(200).json({ product });
   } catch (err) {
     next(err);
   }
